@@ -54,6 +54,14 @@ layout(std140, binding = 2) uniform KernelParams {
     float reserved2;                // 16
     vec4 ewa_coefs_p;               // 16
     vec4 ewa_coefs_q;               // 16
+    int cg_flags;                   // 4
+    int cg_pad0;                    // 8
+    int cg_pad1;                    // 12
+    int cg_pad2;                    // 16
+    vec4 cg_color0;                 // 16
+    vec4 cg_tone0;                  // 16
+    vec4 cg_tone1;                  // 16
+    vec4 cg_reserved;               // 16
 } params;
 
 LENS_MODEL_FUNCTIONS;
@@ -170,6 +178,69 @@ vec2 rotate_point(vec2 pos, float angle, vec2 origin, vec2 origin2) {
      return vec2(cos(angle) * (pos.x - origin.x) - sin(angle) * (pos.y - origin.y) + origin2.x,
                  sin(angle) * (pos.x - origin.x) + cos(angle) * (pos.y - origin.y) + origin2.y);
 }
+vec3 apply_color_grading(vec3 c) {
+    float mpv = max(params.max_pixel_value, 1.0);
+    vec3 x = clamp(c / mpv, 0.0, 1.0);
+    const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+    // ---- Basic correction ----
+    if ((params.cg_flags & 1) != 0) {
+        float temperature = params.cg_color0.x; // -1..1
+        float tint        = params.cg_color0.y; // -1..1
+        float saturation  = params.cg_color0.z; // 0..2
+        float exposure    = params.cg_color0.w; // -1..1
+        float contrast    = params.cg_tone0.x;  // -1..1
+        float highlights  = params.cg_tone0.y;  // -1..1
+        float shadows     = params.cg_tone0.z;  // -1..1
+        float whites      = params.cg_tone0.w;  // -1..1
+        float blacks      = params.cg_tone1.x;  // -1..1
+
+        // White balance
+        x.r += temperature * 0.2;
+        x.b -= temperature * 0.2;
+        x.g += tint * 0.2;
+
+        // Exposure (in stops)
+        x *= pow(2.0, exposure * 2.0);
+
+        // Contrast around mid grey
+        x = (x - 0.5) * (1.0 + contrast) + 0.5;
+
+        // Tonal ranges
+        float luma = dot(clamp(x, 0.0, 1.0), LUMA);
+        x += highlights * 0.5 * smoothstep(0.5, 1.0, luma);
+        x += shadows    * 0.5 * (1.0 - smoothstep(0.0, 0.5, luma));
+        x += whites * 0.2 * luma;
+        x += blacks * 0.2 * (1.0 - luma);
+
+        // Saturation
+        float g = dot(x, LUMA);
+        x = mix(vec3(g), x, saturation);
+    }
+
+    // ---- Creative ----
+    if ((params.cg_flags & 2) != 0) {
+        float faded_film          = params.cg_tone1.y; // 0..1
+        float vibrance            = params.cg_tone1.z; // -1..1
+        float creative_saturation = params.cg_tone1.w; // 0..2
+
+        // Faded film: lift blacks
+        x = mix(x, x * 0.85 + 0.15, faded_film);
+
+        // Vibrance: boost low-saturation pixels more
+        float g2 = dot(x, LUMA);
+        float sat = length(x - vec3(g2));
+        float vib = vibrance * (1.0 - smoothstep(0.0, 0.6, sat));
+        x = mix(vec3(g2), x, 1.0 + vib);
+
+        // Creative saturation
+        float g3 = dot(x, LUMA);
+        x = mix(vec3(g3), x, creative_saturation);
+    }
+
+    return clamp(x, 0.0, 1.0) * mpv;
+}
+
 void main() {
     vec2 texPos = v_texcoord.xy * vec2(params.output_width, params.output_height) + params.translation2d;
     vec2 outPos = v_texcoord.xy * vec2(params.output_width, params.output_height);
