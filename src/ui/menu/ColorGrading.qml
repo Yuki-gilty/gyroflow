@@ -8,7 +8,7 @@ import "../components/"
 
 MenuItem {
     id: root;
-    text: qsTr("基本補正");
+    text: qsTr("Color grading");
     iconName: "color";
     objectName: "colorGrading";
     innerItem.enabled: window.videoArea.vid.loaded;
@@ -37,7 +37,7 @@ MenuItem {
 
     CheckBox {
         id: basicEnabled;
-        text: qsTr("基本補正を有効化");
+        text: qsTr("Enable basic correction");
         checked: false;
         onCheckedChanged: { controller.set_cg_basic_enabled(checked); sett.propChanged(); }
     }
@@ -55,18 +55,18 @@ MenuItem {
     }
 
     Label {
-        text: qsTr("LUT設定");
+        text: qsTr("LUT");
         width: parent.width;
         Row {
             width: parent.width;
             spacing: 5 * dpiScale;
             Button {
-                text: qsTr("LUTを選択");
+                text: qsTr("Select LUT");
                 onClicked: lutFileDialog.open2();
             }
             BasicText {
                 id: lutPathField;
-                text: qsTr("なし");
+                text: qsTr("None");
                 width: parent.width - 100 * dpiScale;
                 elide: Text.ElideMiddle;
                 anchors.verticalCenter: parent.verticalCenter;
@@ -75,12 +75,12 @@ MenuItem {
     }
     CheckBox {
         id: lutEnabled;
-        text: qsTr("LUTを有効化");
+        text: qsTr("Enable LUT");
         checked: false;
         onCheckedChanged: { controller.set_cg_lut_enabled(checked); sett.propChanged(); }
     }
     Label {
-        text: qsTr("LUT強度");
+        text: qsTr("LUT strength");
         width: parent.width;
         SliderWithField {
             id: lutStrength;
@@ -91,10 +91,10 @@ MenuItem {
 
     Hr { }
 
-    BasicText { text: qsTr("カラー"); }
+    BasicText { text: qsTr("Color"); }
 
     Label {
-        text: qsTr("色温度");
+        text: qsTr("Temperature");
         width: parent.width;
         SliderWithField {
             id: temperature;
@@ -103,7 +103,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("色かぶり補正");
+        text: qsTr("Tint");
         width: parent.width;
         SliderWithField {
             id: tint;
@@ -112,7 +112,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("彩度");
+        text: qsTr("Saturation");
         width: parent.width;
         SliderWithField {
             id: basicSaturation;
@@ -121,10 +121,10 @@ MenuItem {
         }
     }
 
-    BasicText { text: qsTr("ライト"); }
+    BasicText { text: qsTr("Light"); }
 
     Label {
-        text: qsTr("露光量");
+        text: qsTr("Exposure");
         width: parent.width;
         SliderWithField {
             id: exposure;
@@ -133,7 +133,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("コントラスト");
+        text: qsTr("Contrast");
         width: parent.width;
         SliderWithField {
             id: contrast;
@@ -142,7 +142,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("ハイライト");
+        text: qsTr("Highlights");
         width: parent.width;
         SliderWithField {
             id: highlights;
@@ -151,7 +151,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("シャドウ");
+        text: qsTr("Shadows");
         width: parent.width;
         SliderWithField {
             id: shadows;
@@ -160,7 +160,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("白レベル");
+        text: qsTr("Whites");
         width: parent.width;
         SliderWithField {
             id: whites;
@@ -169,7 +169,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("黒レベル");
+        text: qsTr("Blacks");
         width: parent.width;
         SliderWithField {
             id: blacks;
@@ -179,7 +179,7 @@ MenuItem {
     }
 
     Button {
-        text: qsTr("リセット");
+        text: qsTr("Reset");
         anchors.right: parent.right;
         onClicked: {
             controller.reset_color_grading();
@@ -187,7 +187,7 @@ MenuItem {
             exposure.value = 0; contrast.value = 0; highlights.value = 0;
             shadows.value = 0; whites.value = 0; blacks.value = 0;
             fadedFilm.value = 0; vibrance.value = 0; creativeSaturation.value = 100;
-            lutEnabled.checked = false; lutStrength.value = 100; lutPathField.text = qsTr("なし");
+            lutEnabled.checked = false; lutStrength.value = 100; lutPathField.text = qsTr("None");
             sett.propChanged();
         }
     }
@@ -196,15 +196,15 @@ MenuItem {
 
     CheckBox {
         id: creativeEnabled;
-        text: qsTr("クリエイティブを有効化");
+        text: qsTr("Enable creative");
         checked: false;
         onCheckedChanged: { controller.set_cg_creative_enabled(checked); sett.propChanged(); }
     }
 
-    BasicText { text: qsTr("調整"); }
+    BasicText { text: qsTr("Adjustments"); }
 
     Label {
-        text: qsTr("色あせたフィルム");
+        text: qsTr("Faded film");
         width: parent.width;
         SliderWithField {
             id: fadedFilm;
@@ -213,7 +213,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("自然な彩度");
+        text: qsTr("Vibrance");
         width: parent.width;
         SliderWithField {
             id: vibrance;
@@ -222,7 +222,7 @@ MenuItem {
         }
     }
     Label {
-        text: qsTr("彩度");
+        text: qsTr("Saturation");
         width: parent.width;
         SliderWithField {
             id: creativeSaturation;
