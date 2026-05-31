@@ -447,6 +447,7 @@ pub fn render<F, F2>(stab: Arc<StabilizationManager>, progress: F, input_file: &
     }
 
     let render_globals = Rc::new(RefCell::new(zero_copy::RenderGlobals::default()));
+    let cg_baker = Rc::new(RefCell::new(color_grading_baker::ColorGradingBaker::default()));
 
     proc.on_frame(move |mut timestamp_us, input_frame, output_frame, converter, rate_control| {
         let fill_with_background = render_options.pad_with_black && !trim_ranges.is_empty() &&
