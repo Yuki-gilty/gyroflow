@@ -29,6 +29,8 @@ MenuItem {
         property alias fadedFilm: fadedFilm.value;
         property alias vibrance: vibrance.value;
         property alias creativeSaturation: creativeSaturation.value;
+        property alias lutEnabled: lutEnabled.checked;
+        property alias lutStrength: lutStrength.value;
         Component.onCompleted: settings.init(sett);
         function propChanged() { settings.propChanged(sett); }
     }
@@ -39,6 +41,55 @@ MenuItem {
         checked: false;
         onCheckedChanged: { controller.set_cg_basic_enabled(checked); sett.propChanged(); }
     }
+
+    FileDialog {
+        id: lutFileDialog;
+        type: "lut";
+        nameFilters: [qsTr("LUT files") + " (*.cube *.CUBE)"];
+        onAccepted: {
+            lutPathField.text = (selectedFile + "").split('/').pop();
+            controller.set_cg_lut_path(selectedFile.toString());
+            lutEnabled.checked = true;
+            sett.propChanged();
+        }
+    }
+
+    Label {
+        text: qsTr("LUT設定");
+        width: parent.width;
+        Row {
+            width: parent.width;
+            spacing: 5 * dpiScale;
+            Button {
+                text: qsTr("LUTを選択");
+                onClicked: lutFileDialog.open2();
+            }
+            BasicText {
+                id: lutPathField;
+                text: qsTr("なし");
+                width: parent.width - 100 * dpiScale;
+                elide: Text.ElideMiddle;
+                anchors.verticalCenter: parent.verticalCenter;
+            }
+        }
+    }
+    CheckBox {
+        id: lutEnabled;
+        text: qsTr("LUTを有効化");
+        checked: false;
+        onCheckedChanged: { controller.set_cg_lut_enabled(checked); sett.propChanged(); }
+    }
+    Label {
+        text: qsTr("LUT強度");
+        width: parent.width;
+        SliderWithField {
+            id: lutStrength;
+            from: 0; to: 100; value: 100; defaultValue: 100; precision: 0; width: parent.width;
+            onValueChanged: { controller.set_cg_lut_strength(value / 100.0); sett.propChanged(); }
+        }
+    }
+
+    Hr { }
 
     BasicText { text: qsTr("カラー"); }
 
@@ -136,6 +187,7 @@ MenuItem {
             exposure.value = 0; contrast.value = 0; highlights.value = 0;
             shadows.value = 0; whites.value = 0; blacks.value = 0;
             fadedFilm.value = 0; vibrance.value = 0; creativeSaturation.value = 100;
+            lutEnabled.checked = false; lutStrength.value = 100; lutPathField.text = qsTr("なし");
             sett.propChanged();
         }
     }
