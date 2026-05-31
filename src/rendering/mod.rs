@@ -4,6 +4,7 @@
 mod ffmpeg_audio;
 mod ffmpeg_video;
 mod ffmpeg_video_converter;
+mod color_grading_baker;
 mod audio_resampler;
 pub mod ffmpeg_processor;
 pub mod ffmpeg_hw;
