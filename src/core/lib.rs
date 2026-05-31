@@ -2130,3 +2130,31 @@ pub enum GyroflowCoreError {
     #[error("Unknown error")]
     Unknown
 }
+
+#[cfg(test)]
+mod color_grading_setter_tests {
+    use crate::StabilizationManager;
+
+    #[test]
+    fn setters_write_through() {
+        let mgr = StabilizationManager::new();
+        mgr.set_cg_exposure(0.5);
+        mgr.set_cg_basic_enabled(true);
+        mgr.set_cg_basic_saturation(1.5);
+        let p = mgr.params.read();
+        assert_eq!(p.color_grading.exposure, 0.5);
+        assert_eq!(p.color_grading.basic_enabled, true);
+        assert_eq!(p.color_grading.basic_saturation, 1.5);
+    }
+
+    #[test]
+    fn reset_restores_defaults() {
+        let mgr = StabilizationManager::new();
+        mgr.set_cg_exposure(0.7);
+        mgr.set_cg_creative_enabled(true);
+        mgr.reset_color_grading();
+        let p = mgr.params.read();
+        assert_eq!(p.color_grading.exposure, 0.0);
+        assert_eq!(p.color_grading.creative_enabled, false);
+    }
+}
