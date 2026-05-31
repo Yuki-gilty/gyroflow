@@ -136,6 +136,52 @@ impl Lut {
             LutKind::Dim1 => self.size,
         }
     }
+
+    #[inline]
+    fn entry(&self, idx: usize) -> [f32; 3] {
+        let o = idx * 4;
+        [self.data[o], self.data[o + 1], self.data[o + 2]]
+    }
+
+    /// CPU LUT sampling matching the GLSL `apply_lut()`. `c` in 0..1, returns the
+    /// graded color blended with the original by `strength` (0..1).
+    /// For 3D: trilinear. For 1D: per-channel linear curve.
+    pub fn sample_rgb(&self, c: [f32; 3], strength: f32) -> [f32; 3] {
+        let n = self.size;
+        if n < 2 { return c; }
+        let nf = (n - 1) as f32;
+        let lerp = |a: [f32; 3], b: [f32; 3], t: f32| [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+        let cl = |v: f32| v.max(0.0).min(1.0);
+        let res = match self.kind {
+            LutKind::Dim3 => {
+                let sample = |ri: usize, gi: usize, bi: usize| self.entry(bi * n * n + gi * n + ri);
+                let rf = cl(c[0]) * nf; let gf = cl(c[1]) * nf; let bf = cl(c[2]) * nf;
+                let r0 = rf.floor() as usize; let g0 = gf.floor() as usize; let b0 = bf.floor() as usize;
+                let r1 = (r0 + 1).min(n - 1); let g1 = (g0 + 1).min(n - 1); let b1 = (b0 + 1).min(n - 1);
+                let dr = rf - r0 as f32; let dg = gf - g0 as f32; let db = bf - b0 as f32;
+                let c000 = sample(r0, g0, b0); let c100 = sample(r1, g0, b0);
+                let c010 = sample(r0, g1, b0); let c110 = sample(r1, g1, b0);
+                let c001 = sample(r0, g0, b1); let c101 = sample(r1, g0, b1);
+                let c011 = sample(r0, g1, b1); let c111 = sample(r1, g1, b1);
+                let c00 = lerp(c000, c100, dr); let c10 = lerp(c010, c110, dr);
+                let c01 = lerp(c001, c101, dr); let c11 = lerp(c011, c111, dr);
+                let c0 = lerp(c00, c10, dg); let c1 = lerp(c01, c11, dg);
+                lerp(c0, c1, db)
+            }
+            LutKind::Dim1 => {
+                let mut out = [0.0f32; 3];
+                for ch in 0..3 {
+                    let f = cl(c[ch]) * nf;
+                    let i0 = f.floor() as usize; let i1 = (i0 + 1).min(n - 1);
+                    let t = f - i0 as f32;
+                    out[ch] = self.entry(i0)[ch] + (self.entry(i1)[ch] - self.entry(i0)[ch]) * t;
+                }
+                out
+            }
+        };
+        let s = strength.max(0.0).min(1.0);
+        [c[0]+(res[0]-c[0])*s, c[1]+(res[1]-c[1])*s, c[2]+(res[2]-c[2])*s]
+    }
 }
 
 #[cfg(test)]

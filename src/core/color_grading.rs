@@ -79,6 +79,53 @@ impl ColorGradingParams {
     pub fn is_identity(&self) -> bool {
         !self.basic_enabled && !self.creative_enabled && !(self.lut_enabled && self.lut.is_some())
     }
+
+    /// Apply the full color grading chain to one RGB pixel in 0..1.
+    /// MUST stay numerically identical to `apply_color_grading()`+`apply_lut()`
+    /// in `src/qt_gpu/undistort.frag` so preview and export match.
+    /// Used by all export backends (after YUV->RGB).
+    pub fn apply_rgb(&self, mut x: [f32; 3]) -> [f32; 3] {
+        const LR: f32 = 0.2126; const LG: f32 = 0.7152; const LB: f32 = 0.0722;
+        let cl = |v: f32| v.max(0.0).min(1.0);
+        let luma = |c: [f32; 3]| c[0] * LR + c[1] * LG + c[2] * LB;
+        let smoothstep = |e0: f32, e1: f32, v: f32| { let t = ((v - e0) / (e1 - e0)).max(0.0).min(1.0); t * t * (3.0 - 2.0 * t) };
+
+        if self.lut_enabled {
+            if let Some(lut) = &self.lut {
+                x = lut.sample_rgb([cl(x[0]), cl(x[1]), cl(x[2])], self.lut_strength);
+            }
+        }
+
+        if self.basic_enabled {
+            x[0] = cl(x[0]); x[1] = cl(x[1]); x[2] = cl(x[2]);
+            x[0] += self.temperature * 0.2;
+            x[2] -= self.temperature * 0.2;
+            x[1] += self.tint * 0.2;
+            let e = 2.0f32.powf(self.exposure * 2.0);
+            x[0] *= e; x[1] *= e; x[2] *= e;
+            for c in x.iter_mut() { *c = (*c - 0.5) * (1.0 + self.contrast) + 0.5; }
+            let l = luma([cl(x[0]), cl(x[1]), cl(x[2])]);
+            let add = self.highlights * 0.5 * smoothstep(0.5, 1.0, l)
+                    + self.shadows    * 0.5 * (1.0 - smoothstep(0.0, 0.5, l))
+                    + self.whites * 0.2 * l
+                    + self.blacks * 0.2 * (1.0 - l);
+            for c in x.iter_mut() { *c += add; }
+            let g = luma(x);
+            for c in x.iter_mut() { *c = g + (*c - g) * self.basic_saturation; }
+        }
+
+        if self.creative_enabled {
+            for c in x.iter_mut() { *c = *c + ((*c * 0.85 + 0.15) - *c) * self.faded_film; }
+            let g2 = luma(x);
+            let sat = ((x[0]-g2).powi(2) + (x[1]-g2).powi(2) + (x[2]-g2).powi(2)).sqrt();
+            let vib = self.vibrance * (1.0 - smoothstep(0.0, 0.6, sat));
+            for c in x.iter_mut() { *c = g2 + (*c - g2) * (1.0 + vib); }
+            let g3 = luma(x);
+            for c in x.iter_mut() { *c = g3 + (*c - g3) * self.creative_saturation; }
+        }
+
+        [cl(x[0]), cl(x[1]), cl(x[2])]
+    }
 }
 
 #[cfg(test)]
