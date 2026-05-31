@@ -680,6 +680,16 @@ pub fn render<F, F2>(stab: Arc<StabilizationManager>, progress: F, input_file: &
             }
         }
 
+        // Bake color grading + LUT into the exported frame (matches the preview math)
+        {
+            let cg = stab.params.read().color_grading.clone();
+            if !cg.is_identity() {
+                if let Err(e) = cg_baker.borrow_mut().apply(output_frame, &cg, ffmpeg_interpolation) {
+                    ::log::error!("Color grading bake failed: {e:?}");
+                }
+            }
+        }
+
         process_frame += 1;
         // log::debug!("process_frame: {}, timestamp_us: {}", process_frame, timestamp_us);
 
