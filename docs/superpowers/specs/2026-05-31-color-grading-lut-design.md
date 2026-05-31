@@ -16,8 +16,8 @@ Gyroflow に Premiere Pro の Lumetri カラー風のカラーグレーディン
 ## 2. スコープ（合意事項）
 
 含む:
-- 適用範囲: プレビュー + 書き出しの両方
-- バックエンド: **wgpu 優先 + CPU フォールバック**（OpenCL は将来対応として未変更でバイパス）
+- 適用範囲: プレビュー + 書き出しの両方（段階的: プレビュー先行 → 書き出し対応。書き出し対応は必須）
+- バックエンド: プレビュー = qt_gpu（GLSL）、書き出し = wgpu + CPU フォールバック（OpenCL は将来対応として未変更でバイパス）
 - 調整項目: フルセット + クリエイティブ
 - LUT: **2 つのスロット**（基本補正 = 入力 LUT、クリエイティブ = ルック LUT）。`.cube` の 1D / 3D 両対応
 - キーフレーム: なし。クリップ全体で固定値
@@ -31,18 +31,35 @@ Gyroflow に Premiere Pro の Lumetri カラー風のカラーグレーディン
 
 ## 3. アーキテクチャ概要
 
-既存の undistort（歪み補正）GPU ステージの**最後・出力直前**に、per-pixel のカラーグレーディング処理を挿入する。追加のレンダーパスを設けないことで、プレビューと書き出しの両方に自動で反映され、既存パイプラインへの侵襲を最小化する。
+### 3.1 調査で判明した重要な制約（設計改訂）
+
+プラン作成時の詳細調査により、当初想定と異なる以下の事実が判明した。これにより設計を改訂する。
+
+1. **プレビューと書き出しで別のシェーダ実装を使う。**
+   - プレビュー（画面表示）: `src/qt_gpu/undistort.frag`（Qt RHI / GLSL, QSB にコンパイル）。入力は **常に RGBA8（1 枚のインターリーブテクスチャ, binding 0 = `inputTexture`）**。
+   - 書き出し: `src/core/gpu/wgpu_undistort.wgsl`（wgpu）/ OpenCL / CPU。出力ピクセル形式に依存。
+2. **書き出しの YUV 系形式（NV12 / P010 / YUV420P / YUV444P 等）はプレーンごとに別実行**される（`src/rendering/mod.rs` がプレーン単位で `process_pixels` を呼ぶ。`KernelParams.plane_index` で識別）。1 回のシェーダ実行は単一プレーン（Y のみ、UV のみ等）しか参照できないため、**RGB を混合する色処理（ホワイトバランス・彩度・LUT 等）を undistort 内に直接入れても YUV 書き出しでは正しく計算できない**。
+
+### 3.2 改訂後のアーキテクチャ
+
+カラーグレーディングは **undistort とは独立した「フル RGBA フレームに対する per-pixel 処理」** として実装し、プレビューと書き出しの両方の経路にそれを通す。色処理の数式は 1 か所で設計し、GLSL（プレビュー）と WGSL/CPU（書き出し）に同じ式を展開する。
 
 ```
-Video Frame
-  → VideoProcessor (ffmpeg/mdk)
-  → rendering/mod.rs on_frame
-  → stabilization.process_pixels()  (core/stabilization/mod.rs)
-  → backend: wgpu (undistort_image) / CPU fallback
-  → undistort sample
-  → [NEW] color grading (basic + creative)   ← 本機能の挿入点
-  → range remap / output
+プレビュー経路:
+  decoded frame → qt_gpu undistort.frag (RGBA8) → [NEW] color grading (RGBA) → 画面
+
+書き出し経路:
+  decoded frame → wgpu/CPU undistort (per-plane) → [NEW] color grading pass (full RGBA; YUV は RGB 変換を挟む) → encoder
 ```
+
+### 3.3 段階的方針（合意）
+
+ユーザー合意により **プレビューを先に完成させ、最終的に書き出しも対応する**。
+
+- フェーズ A（本プラン優先）: プレビュー（qt_gpu）でのカラーグレーディング + LUT を完成。画面で調整・確認できる状態にする。
+- フェーズ B（後続）: 同じ数式を wgpu/CPU 書き出し経路に展開。YUV 形式は RGB 変換を挟んで適用。**書き出しも必ず対応する**こと（ユーザー明示の要件）。
+
+色処理の数式とパラメータ構造（`color_grading.rs` / `lut.rs`）はフェーズ A・B で共有するため、フェーズ A の時点で書き出しに再利用できる形に設計する。
 
 ## 4. コンポーネント構成（責務分離）
 
