@@ -988,6 +988,24 @@ impl StabilizationManager {
     pub fn set_cg_vibrance           (&self, v: f64) { self.params.write().color_grading.vibrance = v as f32; }
     pub fn set_cg_creative_saturation(&self, v: f64) { self.params.write().color_grading.creative_saturation = v as f32; }
     pub fn reset_color_grading       (&self) { self.params.write().color_grading = crate::color_grading::ColorGradingParams::default(); }
+
+    pub fn set_cg_lut_enabled (&self, v: bool) { self.params.write().color_grading.lut_enabled = v; }
+    pub fn set_cg_lut_strength(&self, v: f64)  { self.params.write().color_grading.lut_strength = v as f32; }
+    /// Load a `.cube` LUT from disk. Empty path clears the LUT. Returns Err with a message on parse failure.
+    pub fn set_cg_lut_path(&self, path: &str) -> Result<(), String> {
+        if path.is_empty() {
+            let mut p = self.params.write();
+            p.color_grading.lut_path = String::new();
+            p.color_grading.lut = None;
+            return Ok(());
+        }
+        let text = std::fs::read_to_string(path).map_err(|e| format!("Cannot read LUT: {e}"))?;
+        let lut = crate::lut::Lut::parse_cube(&text)?;
+        let mut p = self.params.write();
+        p.color_grading.lut_path = path.to_string();
+        p.color_grading.lut = Some(std::sync::Arc::new(lut));
+        Ok(())
+    }
     pub fn set_background_mode       (&self, v: i32)  { self.params.write().background_mode = stabilization_params::BackgroundMode::from(v); }
     pub fn set_background_margin     (&self, v: f64)  { self.params.write().background_margin = v; }
     pub fn set_background_margin_feather(&self, v: f64) { self.params.write().background_margin_feather = v; }
