@@ -345,6 +345,7 @@ void main() {
             draw_pixel(fragColor, uv.x, uv.y, true);
             draw_pixel(fragColor, outPos.x, outPos.y, false);
             draw_safe_area(fragColor, outPos.x, outPos.y);
+            fragColor.rgb = apply_color_grading(fragColor.rgb);
             return;
         }
 
@@ -353,6 +354,7 @@ void main() {
             draw_pixel(fragColor, uv.x, uv.y, true);
             draw_pixel(fragColor, outPos.x, outPos.y, false);
             draw_safe_area(fragColor, outPos.x, outPos.y);
+            fragColor.rgb = apply_color_grading(fragColor.rgb);
             return;
         }
     }
