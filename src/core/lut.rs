@@ -17,7 +17,7 @@ pub enum LutKind {
     Dim3,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Lut {
     pub kind: LutKind,
     pub size: usize,

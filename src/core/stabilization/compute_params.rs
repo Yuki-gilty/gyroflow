@@ -137,7 +137,7 @@ impl ComputeParams {
             focal_length_smoothing_enabled: params.focal_length_smoothing_enabled,
             focal_length_smoothing_strength: params.focal_length_smoothing_strength,
 
-            color_grading: params.color_grading,
+            color_grading: params.color_grading.clone(),
         }
     }
 

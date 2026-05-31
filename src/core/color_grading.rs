@@ -14,7 +14,7 @@
 //! divides by 100 before calling the setters, so the core only ever sees
 //! normalized values.
 
-#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct ColorGradingParams {
     pub basic_enabled: bool,
@@ -37,6 +37,15 @@ pub struct ColorGradingParams {
     pub faded_film: f32,
     pub vibrance: f32,
     pub creative_saturation: f32,
+
+    // LUT (.cube). Path is persisted; strength 0..1; enabled toggles it.
+    pub lut_enabled: bool,
+    pub lut_strength: f32,
+    pub lut_path: String,
+
+    // Parsed LUT data, kept out of serde (re-loaded from lut_path on import).
+    #[serde(skip)]
+    pub lut: Option<std::sync::Arc<crate::lut::Lut>>,
 }
 
 impl Default for ColorGradingParams {
@@ -56,6 +65,10 @@ impl Default for ColorGradingParams {
             faded_film: 0.0,
             vibrance: 0.0,
             creative_saturation: 1.0,
+            lut_enabled: false,
+            lut_strength: 1.0,
+            lut_path: String::new(),
+            lut: None,
         }
     }
 }
@@ -64,7 +77,7 @@ impl ColorGradingParams {
     /// True when no enabled section would alter the image. Used to skip the
     /// color pass entirely (identity).
     pub fn is_identity(&self) -> bool {
-        !self.basic_enabled && !self.creative_enabled
+        !self.basic_enabled && !self.creative_enabled && !(self.lut_enabled && self.lut.is_some())
     }
 }
 
