@@ -69,6 +69,46 @@ LENS_MODEL_FUNCTIONS;
 layout(binding = 3) uniform sampler2D texParams;
 layout(binding = 4) uniform sampler2D texCanvas;
 layout(binding = 5) uniform sampler2D texMeshData;
+layout(binding = 6) uniform sampler2D texLut;
+
+// Fixed LUT texture dimensions (see qrhi_undistort.cpp). The actual LUT of
+// size N occupies the top-left NxN*N (3D) or 1xN (1D) region.
+const float LUT_TEX_W = 65.0;
+const float LUT_TEX_H = 4225.0; // 65*65
+
+vec3 sample_lut3d_slice(float n, float rf, float gf, float bslice) {
+    // rf,gf in [0,1]; bslice integer slice index
+    float px = rf * (n - 1.0);
+    float py = bslice * n + gf * (n - 1.0);
+    float tx = (px + 0.5) / LUT_TEX_W;
+    float ty = (py + 0.5) / LUT_TEX_H;
+    return texture(texLut, vec2(tx, ty)).rgb;
+}
+vec3 apply_lut(vec3 c) {
+    float strength = params.cg_reserved.x;
+    float n        = params.cg_reserved.y;
+    float kind     = params.cg_reserved.z; // 1=3D, 0=1D
+    if (n < 2.0) return c;
+    vec3 x = clamp(c, 0.0, 1.0);
+    vec3 res;
+    if (kind > 0.5) {
+        // Trilinear: hardware bilinear in (r,g) within a slice, manual lerp in b
+        float bf = x.b * (n - 1.0);
+        float b0 = floor(bf);
+        float b1 = min(b0 + 1.0, n - 1.0);
+        float fb = bf - b0;
+        vec3 c0 = sample_lut3d_slice(n, x.r, x.g, b0);
+        vec3 c1 = sample_lut3d_slice(n, x.r, x.g, b1);
+        res = mix(c0, c1, fb);
+    } else {
+        // 1D LUT: per-channel curve (texture is 1 wide, N tall)
+        float r = texture(texLut, vec2(0.5 / LUT_TEX_W, (x.r * (n - 1.0) + 0.5) / LUT_TEX_H)).r;
+        float g = texture(texLut, vec2(0.5 / LUT_TEX_W, (x.g * (n - 1.0) + 0.5) / LUT_TEX_H)).g;
+        float b = texture(texLut, vec2(0.5 / LUT_TEX_W, (x.b * (n - 1.0) + 0.5) / LUT_TEX_H)).b;
+        res = vec3(r, g, b);
+    }
+    return mix(c, res, clamp(strength, 0.0, 1.0));
+}
 
 const vec4 colors[9] = vec4[9](
     vec4(0.0,   0.0,   0.0,     0.0), // None
@@ -182,6 +222,11 @@ vec3 apply_color_grading(vec3 c) {
     float mpv = max(params.max_pixel_value, 1.0);
     vec3 x = clamp(c / mpv, 0.0, 1.0);
     const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+    // ---- Input LUT (applied first, like Premiere's 基本補正 LUT設定) ----
+    if ((params.cg_flags & 4) != 0) {
+        x = apply_lut(x);
+    }
 
     // ---- Basic correction ----
     if ((params.cg_flags & 1) != 0) {
