@@ -971,6 +971,22 @@ impl StabilizationManager {
     pub fn set_frame_offset          (&self, v: i32)  { self.params.write().frame_offset           = v; }
     pub fn set_light_refraction_coefficient(&self, v: f64) { self.params.write().light_refraction_coefficient = v; self.invalidate_zooming(); }
     pub fn set_background_color      (&self, bg: Vector4<f32>) { self.params.write().background = bg; }
+
+    pub fn set_cg_basic_enabled      (&self, v: bool) { self.params.write().color_grading.basic_enabled = v; }
+    pub fn set_cg_creative_enabled   (&self, v: bool) { self.params.write().color_grading.creative_enabled = v; }
+    pub fn set_cg_temperature        (&self, v: f64) { self.params.write().color_grading.temperature = v as f32; }
+    pub fn set_cg_tint               (&self, v: f64) { self.params.write().color_grading.tint = v as f32; }
+    pub fn set_cg_basic_saturation   (&self, v: f64) { self.params.write().color_grading.basic_saturation = v as f32; }
+    pub fn set_cg_exposure           (&self, v: f64) { self.params.write().color_grading.exposure = v as f32; }
+    pub fn set_cg_contrast           (&self, v: f64) { self.params.write().color_grading.contrast = v as f32; }
+    pub fn set_cg_highlights         (&self, v: f64) { self.params.write().color_grading.highlights = v as f32; }
+    pub fn set_cg_shadows            (&self, v: f64) { self.params.write().color_grading.shadows = v as f32; }
+    pub fn set_cg_whites             (&self, v: f64) { self.params.write().color_grading.whites = v as f32; }
+    pub fn set_cg_blacks             (&self, v: f64) { self.params.write().color_grading.blacks = v as f32; }
+    pub fn set_cg_faded_film         (&self, v: f64) { self.params.write().color_grading.faded_film = v as f32; }
+    pub fn set_cg_vibrance           (&self, v: f64) { self.params.write().color_grading.vibrance = v as f32; }
+    pub fn set_cg_creative_saturation(&self, v: f64) { self.params.write().color_grading.creative_saturation = v as f32; }
+    pub fn reset_color_grading       (&self) { self.params.write().color_grading = crate::color_grading::ColorGradingParams::default(); }
     pub fn set_background_mode       (&self, v: i32)  { self.params.write().background_mode = stabilization_params::BackgroundMode::from(v); }
     pub fn set_background_margin     (&self, v: f64)  { self.params.write().background_margin = v; }
     pub fn set_background_margin_feather(&self, v: f64) { self.params.write().background_margin_feather = v; }
