@@ -26,6 +26,7 @@ pub mod gpu;
 pub mod util;
 pub mod stabilization_params;
 pub mod color_grading;
+pub mod lut;
 
 use std::sync::{ Arc, atomic::{ AtomicU64, AtomicBool, Ordering::SeqCst } };
 use std::collections::BTreeMap;
