@@ -1334,6 +1334,7 @@ impl StabilizationManager {
                 "additional_rotation":    params.additional_rotation,
                 "additional_translation": params.additional_translation,
                 "lens_correction_amount": params.lens_correction_amount,
+        "color_grading": serde_json::to_value(&params.color_grading).unwrap_or(serde_json::Value::Null),
                 "horizon_lock_amount":    horizon_amount,
                 "horizon_lock_roll":      horizon_lock.horizonroll,
                 "horizon_lock_pitch_enabled": horizon_lock.lock_pitch,
