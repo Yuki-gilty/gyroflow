@@ -25,6 +25,7 @@ pub mod gpu;
 
 pub mod util;
 pub mod stabilization_params;
+pub mod color_grading;
 
 use std::sync::{ Arc, atomic::{ AtomicU64, AtomicBool, Ordering::SeqCst } };
 use std::collections::BTreeMap;
@@ -2131,13 +2132,14 @@ pub enum GyroflowCoreError {
     Unknown
 }
 
+
 #[cfg(test)]
 mod color_grading_setter_tests {
     use crate::StabilizationManager;
 
     #[test]
     fn setters_write_through() {
-        let mgr = StabilizationManager::new();
+        let mgr = StabilizationManager::default();
         mgr.set_cg_exposure(0.5);
         mgr.set_cg_basic_enabled(true);
         mgr.set_cg_basic_saturation(1.5);
@@ -2149,7 +2151,7 @@ mod color_grading_setter_tests {
 
     #[test]
     fn reset_restores_defaults() {
-        let mgr = StabilizationManager::new();
+        let mgr = StabilizationManager::default();
         mgr.set_cg_exposure(0.7);
         mgr.set_cg_creative_enabled(true);
         mgr.reset_color_grading();
